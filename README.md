@@ -27,7 +27,7 @@ pip install -e .
 # 4) Sanity check: RDKit, Torch, PyG, and the package import
 python - <<'PY'
 from rdkit import Chem
-import torch, torch_geometric, mol_interp
+import torch, torch_geometric, llm_mol_interp
 print("RDKit OK:", bool(Chem.MolFromSmiles("O=[N+]([O-])c1ccccc1")))
 print("Torch:", torch.__version__, "| PyG:", torch_geometric.__version__)
 PY
@@ -49,14 +49,14 @@ Place your Tox21 CSV at `data/tox21_multitask.csv` and ensure:
 ## Train a D-MPNN (single seed)
 
 ```bash
-python -m mol_interp.cli.train_dmpnn   --data-csv data/tox21_multitask.csv --smiles-col smiles   --out-dir runs/dmpnn_tox21   --epochs 50 --batch-size 64 --depth 3 --hidden 256   --dropout 0.2 --lr 1e-3 --scheduler onecycle   --weight-decay 1e-2 --clip-grad 1.0 --patience 10 --seed 7
+python -m llm_mol_interp.cli.train_dmpnn   --data-csv data/tox21_multitask.csv --smiles-col smiles   --out-dir runs/dmpnn_tox21   --epochs 50 --batch-size 64 --depth 3 --hidden 256   --dropout 0.2 --lr 1e-3 --scheduler onecycle   --weight-decay 1e-2 --clip-grad 1.0 --patience 10 --seed 7
 ```
 
 ### Reproduce 5 seeds for an ensemble
 
 ```bash
 for SEED in 1 2 3 4 5; do
-  python -m mol_interp.cli.train_dmpnn     --data-csv data/tox21_multitask.csv --smiles-col smiles     --out-dir runs/dmpnn_tox21_seed${SEED}     --epochs 50 --batch-size 64 --depth 3 --hidden 256     --dropout 0.2 --lr 1e-3 --scheduler onecycle     --weight-decay 1e-2 --clip-grad 1.0 --patience 10 --seed ${SEED}
+  python -m llm_mol_interp.cli.train_dmpnn     --data-csv data/tox21_multitask.csv --smiles-col smiles     --out-dir runs/dmpnn_tox21_seed${SEED}     --epochs 50 --batch-size 64 --depth 3 --hidden 256     --dropout 0.2 --lr 1e-3 --scheduler onecycle     --weight-decay 1e-2 --clip-grad 1.0 --patience 10 --seed ${SEED}
 done
 ```
 
@@ -65,17 +65,17 @@ done
 ## Ensemble evaluation
 
 ```bash
-python -m mol_interp.cli.ensemble_eval   --data-csv data/tox21_multitask.csv --smiles-col smiles   --ckpts runs/dmpnn_tox21_seed1/best.pt          runs/dmpnn_tox21_seed2/best.pt          runs/dmpnn_tox21_seed3/best.pt          runs/dmpnn_tox21_seed4/best.pt          runs/dmpnn_tox21_seed5/best.pt   --split-seed 7 --batch-size 256   --out-dir runs/dmpnn_tox21_ensemble --save-preds-csv
+python -m llm_mol_interp.cli.ensemble_eval   --data-csv data/tox21_multitask.csv --smiles-col smiles   --ckpts runs/dmpnn_tox21_seed1/best.pt          runs/dmpnn_tox21_seed2/best.pt          runs/dmpnn_tox21_seed3/best.pt          runs/dmpnn_tox21_seed4/best.pt          runs/dmpnn_tox21_seed5/best.pt   --split-seed 7 --batch-size 256   --out-dir runs/dmpnn_tox21_ensemble --save-preds-csv
 ```
 
 ---
 
 ## Generate grounded explanations
 
-The explainer uses **Integrated Gradients** from a reference, aggregates atom/edge attributions into fragments, matches to **SMARTS** patterns, and links to a YAML KB (`mol_interp/xai/kb.yaml`) to produce **assay-aware rationales**.
+The explainer uses **Integrated Gradients** from a reference, aggregates atom/edge attributions into fragments, matches to **SMARTS** patterns, and links to a YAML KB (`llm_mol_interp/xai/kb.yaml`) to produce **assay-aware rationales**.
 
 ```bash
-python -m mol_interp.cli.explain_testset   --data-csv data/tox21_multitask.csv --smiles-col smiles   --ckpt runs/dmpnn_tox21_seed3/best.pt   --ensemble-ckpts runs/dmpnn_tox21_seed1/best.pt                    runs/dmpnn_tox21_seed2/best.pt                    runs/dmpnn_tox21_seed3/best.pt                    runs/dmpnn_tox21_seed4/best.pt                    runs/dmpnn_tox21_seed5/best.pt   --split-seed 7 --max-mols -1 --ig-steps 64   --kb mol_interp/xai/kb.yaml   --out-dir runs/dmpnn_tox21_ensemble/explanations
+python -m llm_mol_interp.cli.explain_testset   --data-csv data/tox21_multitask.csv --smiles-col smiles   --ckpt runs/dmpnn_tox21_seed3/best.pt   --ensemble-ckpts runs/dmpnn_tox21_seed1/best.pt                    runs/dmpnn_tox21_seed2/best.pt                    runs/dmpnn_tox21_seed3/best.pt                    runs/dmpnn_tox21_seed4/best.pt                    runs/dmpnn_tox21_seed5/best.pt   --split-seed 7 --max-mols -1 --ig-steps 64   --kb llm_mol_interp/xai/kb.yaml   --out-dir runs/dmpnn_tox21_ensemble/explanations
 ```
 
 Outputs (in `.../explanations/`):
@@ -89,19 +89,19 @@ Outputs (in `.../explanations/`):
 Calibrate **operating points** (e.g., target precision for screening) and/or compute **F1-optimal** thresholds.
 
 ```bash
-python -m mol_interp.utils.calibrate_threshold   --jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --csv data/tox21_multitask.csv   --smiles-col smiles   --target-precision 0.50   --out-dir runs/dmpnn_tox21_ensemble
+python -m llm_mol_interp.utils.calibrate_threshold   --jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --csv data/tox21_multitask.csv   --smiles-col smiles   --target-precision 0.50   --out-dir runs/dmpnn_tox21_ensemble
 ```
 
 Generate a short report at **F1-optimal** thresholds:
 
 ```bash
-python -m mol_interp.utils.verdict_report   --explanations-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --data-csv data/tox21_multitask.csv --smiles-col smiles   --thresholds-json runs/dmpnn_tox21_ensemble/thresholds_f1.json
+python -m llm_mol_interp.utils.verdict_report   --explanations-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --data-csv data/tox21_multitask.csv --smiles-col smiles   --thresholds-json runs/dmpnn_tox21_ensemble/thresholds_f1.json
 ```
 
 Score with a chosen threshold set:
 
 ```bash
-python -m mol_interp.utils.score_with_threshold   --jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --csv data/tox21_multitask.csv   --smiles-col smiles   --thresholds runs/dmpnn_tox21_ensemble/thresholds_f1.json
+python -m llm_mol_interp.utils.score_with_threshold   --jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --csv data/tox21_multitask.csv   --smiles-col smiles   --thresholds runs/dmpnn_tox21_ensemble/thresholds_f1.json
 ```
 
 > **Note:** If you used the calibration step, threshold JSONs (e.g., `thresholds_f1.json`, precision-targeted) will be saved under the same `--out-dir`.
@@ -113,7 +113,7 @@ python -m mol_interp.utils.score_with_threshold   --jsonl runs/dmpnn_tox21_ensem
 Create `/tmp/one.csv` with a column `smiles`, then:
 
 ```bash
-python -m mol_interp.cli.explain_testset   --data-csv /tmp/one.csv --smiles-col smiles   --ckpt runs/dmpnn_tox21_seed3/best.pt   --ig-steps 64   --kb mol_interp/xai/kb.yaml   --out-dir runs/dmpnn_tox21_explanations_single   --thresholds-json runs/dmpnn_tox21_ensemble/thresholds_f1.json   --default-thr 0.5
+python -m llm_mol_interp.cli.explain_testset   --data-csv /tmp/one.csv --smiles-col smiles   --ckpt runs/dmpnn_tox21_seed3/best.pt   --ig-steps 64   --kb llm_mol_interp/xai/kb.yaml   --out-dir runs/dmpnn_tox21_explanations_single   --thresholds-json runs/dmpnn_tox21_ensemble/thresholds_f1.json   --default-thr 0.5
 ```
 
 ---
@@ -123,13 +123,13 @@ python -m mol_interp.cli.explain_testset   --data-csv /tmp/one.csv --smiles-col 
 1) Re-score importances by **feature masking** (top-k, zeroing):
 
 ```bash
-python mol_interp/runtime/make_importances_from_masking.py   --in-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --out-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations_masking.jsonl   --endpoint NR-AR   --ckpts runs/dmpnn_tox21_seed1/best.pt runs/dmpnn_tox21_seed2/best.pt           runs/dmpnn_tox21_seed3/best.pt runs/dmpnn_tox21_seed4/best.pt           runs/dmpnn_tox21_seed5/best.pt   --target-names NR-AR NR-AR-LBD NR-AhR NR-Aromatase NR-ER NR-ER-LBD NR-PR NR-PPAR-gamma SR-ARE SR-ATAD5 SR-HSE SR-MMP   --topk 10 --mask-mode zero
+python llm_mol_interp/runtime/make_importances_from_masking.py   --in-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations.jsonl   --out-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations_masking.jsonl   --endpoint NR-AR   --ckpts runs/dmpnn_tox21_seed1/best.pt runs/dmpnn_tox21_seed2/best.pt           runs/dmpnn_tox21_seed3/best.pt runs/dmpnn_tox21_seed4/best.pt           runs/dmpnn_tox21_seed5/best.pt   --target-names NR-AR NR-AR-LBD NR-AhR NR-Aromatase NR-ER NR-ER-LBD NR-PR NR-PPAR-gamma SR-ARE SR-ATAD5 SR-HSE SR-MMP   --topk 10 --mask-mode zero
 ```
 
 2) Compute **comprehensiveness**, **sufficiency**, **deletion/insertion AUC**, etc.:
 
 ```bash
-python -m chemxai_faithfulness.cli   --explanations-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations_masking.jsonl   --ckpts runs/dmpnn_tox21_seed1/best.pt runs/dmpnn_tox21_seed2/best.pt           runs/dmpnn_tox21_seed3/best.pt runs/dmpnn_tox21_seed4/best.pt           runs/dmpnn_tox21_seed5/best.pt   --endpoint NR-AR   --out-dir runs/dmpnn_tox21_ensemble/faithfulness_masking   --kb mol_interp/xai/kb.yaml   --target-names NR-AR NR-AR-LBD NR-AhR NR-Aromatase NR-ER NR-ER-LBD NR-PR NR-PPAR-gamma SR-ARE SR-ATAD5 SR-HSE SR-MMP
+python -m chemxai_faithfulness.cli   --explanations-jsonl runs/dmpnn_tox21_ensemble/explanations/explanations_masking.jsonl   --ckpts runs/dmpnn_tox21_seed1/best.pt runs/dmpnn_tox21_seed2/best.pt           runs/dmpnn_tox21_seed3/best.pt runs/dmpnn_tox21_seed4/best.pt           runs/dmpnn_tox21_seed5/best.pt   --endpoint NR-AR   --out-dir runs/dmpnn_tox21_ensemble/faithfulness_masking   --kb llm_mol_interp/xai/kb.yaml   --target-names NR-AR NR-AR-LBD NR-AhR NR-Aromatase NR-ER NR-ER-LBD NR-PR NR-PPAR-gamma SR-ARE SR-ATAD5 SR-HSE SR-MMP
 ```
 
 ---
@@ -172,10 +172,10 @@ Macro F1: 0.332 | Micro F1: 0.362 | Micro Acc: 0.820
 
 ```bash
 # A) Run explanations for ONE model (e.g., seed 3)
-python -m mol_interp.cli.explain_testset   --data-csv data/tox21_multitask.csv   --smiles-col smiles   --ckpt runs/dmpnn_tox21_seed3/best.pt   --out-dir runs/dmpnn_tox21_seed3/explanations
+python -m llm_mol_interp.cli.explain_testset   --data-csv data/tox21_multitask.csv   --smiles-col smiles   --ckpt runs/dmpnn_tox21_seed3/best.pt   --out-dir runs/dmpnn_tox21_seed3/explanations
 
 # Produce F1-threshold scores for those explanations
-python -m mol_interp.utils.score_with_threshold   --jsonl runs/dmpnn_tox21_seed3/explanations/explanations.jsonl   --csv data/tox21_multitask.csv   --smiles-col smiles   --thresholds runs/dmpnn_tox21_ensemble/thresholds_f1.json
+python -m llm_mol_interp.utils.score_with_threshold   --jsonl runs/dmpnn_tox21_seed3/explanations/explanations.jsonl   --csv data/tox21_multitask.csv   --smiles-col smiles   --thresholds runs/dmpnn_tox21_ensemble/thresholds_f1.json
 ```
 
 ---
@@ -185,20 +185,20 @@ python -m mol_interp.utils.score_with_threshold   --jsonl runs/dmpnn_tox21_seed3
 - **Conda channels**: install `rdkit` from **conda-forge**, PyTorch from the **pytorch** channel, and PyG from **pyg**.
 - **macOS (Apple Silicon)**: CPU and MPS backends work; CUDA is Linux/NVIDIA only.
 - **Reproducibility**: set `--split-seed` and `--seed` (per run); we ensemble 5 seeds by default.
-- **KB file**: customize `mol_interp/xai/kb.yaml` to extend SMARTS → concept mappings and rationale templates.
+- **KB file**: customize `llm_mol_interp/xai/kb.yaml` to extend SMARTS → concept mappings and rationale templates.
 
 ---
 
 ## Repository highlights
 
-- `mol_interp/cli/train_dmpnn.py` — train D-MPNN
-- `mol_interp/cli/ensemble_eval.py` — evaluate an ensemble
-- `mol_interp/cli/explain_testset.py` — run IG + SMARTS + KB rationales
-- `mol_interp/utils/calibrate_threshold.py` — calibrate operating points
-- `mol_interp/utils/verdict_report.py` — generate thresholded report
-- `mol_interp/utils/score_with_threshold.py` — apply thresholds to explanations
-- `mol_interp/runtime/make_importances_from_masking.py` — faithfulness via masking
-- `mol_interp/xai/kb.yaml` — knowledge base for assay-aware, grounded explanations
+- `llm_mol_interp/cli/train_dmpnn.py` — train D-MPNN
+- `llm_mol_interp/cli/ensemble_eval.py` — evaluate an ensemble
+- `llm_mol_interp/cli/explain_testset.py` — run IG + SMARTS + KB rationales
+- `llm_mol_interp/utils/calibrate_threshold.py` — calibrate operating points
+- `llm_mol_interp/utils/verdict_report.py` — generate thresholded report
+- `llm_mol_interp/utils/score_with_threshold.py` — apply thresholds to explanations
+- `llm_mol_interp/runtime/make_importances_from_masking.py` — faithfulness via masking
+- `llm_mol_interp/xai/kb.yaml` — knowledge base for assay-aware, grounded explanations
 
 ---
 
