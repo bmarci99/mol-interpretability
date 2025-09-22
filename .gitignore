@@ -8,7 +8,7 @@ __pycache__/
 .idea/
 .vscode/
 
-# Data & outputs (generated)
+# Data & generated artifacts
 runs/
 data/
 *.pt
