@@ -1,0 +1,27 @@
+# Core ML
+torch>=2.1
+torch-geometric>=2.3
+torch-scatter>=2.1
+xgboost
+# Explainability
+captum>=0.7.0
+# Chemistry
+rdkit   # or leave this out if you’re using conda
+PyTDC
+# NLP / LLM
+transformers>=4.42.0
+accelerate>=0.31
+datasets>=2.20.0
+# Utilities
+numpy>=1.24.0
+pandas>=2.2.0
+scikit-learn>=1.2.0
+tqdm>=4.66.0
+typer>=0.12.0
+rich>=13.4.0
+matplotlib>=3.8.0
+pytest>=8.0.0
+captum>=0.7
+sentencepiece>=0.2
+pyyaml>=6.0
+joblib

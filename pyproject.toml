@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-mol-interp"
+version = "0.1.0"
+dependencies = [
+    "torch",
+    "torch-geometric",
+    "rdkit",
+    "transformers",
+    "typer",
+    "pyyaml",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["llm_mol_interp", "chemxai_faithfulness"]
+
+[tool.setuptools.package-data]
+"llm_mol_interp.xai" = ["kb.yaml"]

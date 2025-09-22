@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: llm-mol-interp
+Version: 0.1.0
+Requires-Dist: torch
+Requires-Dist: torch-geometric
+Requires-Dist: rdkit
+Requires-Dist: transformers
+Requires-Dist: typer
+Requires-Dist: pyyaml

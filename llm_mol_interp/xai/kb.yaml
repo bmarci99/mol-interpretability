@@ -1,0 +1,33 @@
+haloarene:
+  title: Halogenated aromatic (aryl halide)
+  summary: >
+    Halogenated aromatics can elevate AhR and stress responses via planarity, hydrophobicity,
+    and metabolic stability; polyhalogenation increases risk.
+  caveats:
+    - Substitution pattern matters; many are benign.
+    - Lipophilicity and assay artifacts can inflate signals.
+  mitigation:
+    - Reduce halogenation or use less lipophilic substituents.
+    - Break planarity (e.g., ortho block or sp3 linker).
+    - Add polarity/HBD/HBA to lower logP and nonspecific binding.
+
+aldehyde:
+  title: Reactive aldehyde
+  summary: >
+    Electrophilic carbonyls can form Schiff bases and trigger stress/DNA-damage pathways.
+  mitigation:
+    - Convert to amide/acid/isostere; add steric hindrance near the carbonyl.
+
+azo:
+  title: Azo linkage (–N=N–)
+  summary: >
+    Reductive cleavage can yield aromatic amines and drive p53/stress signals.
+  mitigation:
+    - Replace azo with a non-cleavable linker; avoid downstream anilines.
+
+polycyclic aromatic:
+  title: Polycyclic aromatic system
+  summary: >
+    Planar, hydrophobic polycyclics can bind AhR and promote oxidative stress.
+  mitigation:
+    - Reduce planarity; add heteroatoms/sp3; lower logP.
