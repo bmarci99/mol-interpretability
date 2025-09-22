@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+
+# Envs / editors
+.venv/
+.env
+.idea/
+.vscode/
+
+# Data & outputs (generated)
+runs/
+data/
+*.pt
+*.pth
+*.ckpt
+*.jsonl
+*.csv
+*.png
+
+# Build
+dist/
+build/
+*.egg-info/
